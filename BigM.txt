@@ -1,0 +1,75 @@
+clc
+clear all
+Variables = {'x1','x2','s1','s2','A1','A2','Sol'};
+M = 10000;
+Cost = [2 8 0 0 M M 0];
+A = [5 10 0  0 1 0 150;
+     1  0 1  0 0 0 20;
+     0  1 0 -1 0 1 14];
+s = eye(size(A,1));
+BV = [];
+
+for j = 1:size(s,2)
+    for i = 1:size(A,2)-1
+        if isequal(A(:,i),s(:,j))
+            BV = [BV i];
+        end
+    end
+end
+
+ZjCj = Cost(BV)*A - Cost;
+ZCj = [ZjCj;A];
+
+SimpTable = array2table(ZCj);
+SimpTable.Properties.VariableNames(1:size(ZCj,2)) = Variables;
+
+disp('Initial Simplex Table')
+disp(SimpTable)
+
+Run = true;
+while Run
+    ZC = ZjCj(1,1:end-1);
+    if any(ZC > 0)
+        [MinValue,Pvt_Col] = max(ZC);
+
+        if (A(:,Pvt_Col) <= 0)
+            fprintf('\nLPP has Unbounded Solution\n')
+            break;
+        end
+
+        sol = A(:,end);
+        Col = A(:,Pvt_Col);
+
+        for i = 1:size(Col,1)
+            if Col(i) > 0
+                ratio(i) = sol(i)/Col(i);
+            else
+                ratio(i) = inf;
+            end
+        end
+
+        [MinRatio,Pvt_Row] = min(ratio);
+        BV(Pvt_Row) = Pvt_Col;
+        Pvt_Key = A(Pvt_Row,Pvt_Col);
+        A(Pvt_Row,:) = A(Pvt_Row,:)/Pvt_Key;
+
+        for i = 1:size(A,1)
+            if i ~= Pvt_Row
+                A(i,:) = A(i,:) - A(i,Pvt_Col)*A(Pvt_Row,:);
+            end
+        end
+
+        ZjCj = ZjCj - ZjCj(Pvt_Col)*A(Pvt_Row,:);
+        ZCj = [ZjCj;A];
+
+        SimpTable = array2table(ZCj);
+        SimpTable.Properties.VariableNames(1:size(ZCj,2)) = Variables;
+
+        disp('Updated Simplex Table')
+        disp(SimpTable)
+
+    else
+        Run = false;
+        fprintf('Optimal Solution Reached\n')
+    end
+end

@@ -1,0 +1,63 @@
+clc;
+clear all;
+C = [2 3];
+a = [2 2; -1 -2 ];
+b = [30; -10];
+n = size(a, 2);
+s = eye(size(a, 1));
+A = [a s b];
+
+cost = zeros(1, size(A, 2));
+cost(1:n) = C;
+
+bv = n + 1 : 1 : size(A, 2) - 1;
+zjcj = cost(bv)*A - cost;
+
+zcj = [A; zjcj];
+
+simptable = array2table(zcj, 'VariableNames', {'x1', 'x2', 's1', 's2', 'z'})
+simptable.Properties.VariableNames(1: size(zcj, 2)) = {'x1', 'x2', 's1', 's2', 'sol'}
+
+run  = true;
+while run
+    Zc = zjcj(1:end-1);
+
+    if all(Zc <= 0)
+        disp("optimality achieved... go to dual simplex");
+    else
+        disp("not optimal");
+        break;
+    end
+
+    sol = A(:, end);
+    
+    if any(sol < 0)
+        [minVal pivot_row] = min(sol);
+        for i = 1 : size(A, 2) - 1
+            if A(pivot_row, i) < 0
+                ratio(i) = abs(zjcj(i) / A(pivot_row, i));
+            else
+                ratio(i) = inf;
+            end
+        end
+
+        [minVal pivot_col] = min(ratio);
+        pivot_key = A(pivot_row, pivot_col);
+        bv(pivot_row) = pivot_col;
+        A(pivot_row, :) = A(pivot_row, :)/ pivot_key;
+
+        for i = 1 : size(A, 1)
+            if i ~= pivot_row
+                A(i, :) = A(i, :) - A(i, pivot_col) * A(pivot_row, :);
+            end
+        end
+
+        zjcj = zjcj - zjcj(pivot_col) * A(pivot_row, :);
+        zcj = [zjcj;A];
+
+        array2table(zcj, 'VariableNames', {'x1', 'x2', 's1', 's2', 'sol'})
+    else
+        run = false
+        fprintf('The given solution is optimal');
+    end
+end
